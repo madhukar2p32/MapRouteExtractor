@@ -632,21 +632,19 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
+    from flask import jsonify
     if 'file' not in request.files:
-        flash('No file selected')
-        return redirect(request.url)
+        return jsonify({'error': 'No file selected'}), 400
 
     file        = request.files['file']
     source      = request.form.get('source', 'Starting Point').strip() or 'Starting Point'
     destination = request.form.get('destination', 'Destination').strip() or 'Destination'
 
     if file.filename == '':
-        flash('No file selected')
-        return redirect(url_for('index'))
+        return jsonify({'error': 'No file selected'}), 400
 
     if not allowed_file(file.filename):
-        flash('Invalid file type. Please upload PNG, JPG, JPEG, BMP, or GIF.')
-        return redirect(url_for('index'))
+        return jsonify({'error': 'Invalid file type. Use PNG, JPG, JPEG, BMP or GIF.'}), 400
 
     try:
         filename  = secure_filename(file.filename)
@@ -656,38 +654,58 @@ def upload_file():
 
         upload_path      = os.path.join(app.config['UPLOAD_FOLDER'], f'{base}_{timestamp}{ext}')
         route_image_path = os.path.join(app.config['OUTPUT_FOLDER'], f'{base}_route_{timestamp}.png')
-        doc_path         = os.path.join(app.config['OUTPUT_FOLDER'], f'{base}_route_{timestamp}.docx')
+        doc_name         = f'{base}_route_{timestamp}.docx'
+        doc_path         = os.path.join(app.config['OUTPUT_FOLDER'], doc_name)
 
         file.save(upload_path)
 
-        # Extract blue route with labels
         route_image_path, landmarks = extract_blue_lines_with_labels(
             upload_path, route_image_path, source, destination
         )
 
         if not DOCX_AVAILABLE:
-            flash('python-docx is not installed. Cannot generate Word document.')
-            return redirect(url_for('index'))
+            return jsonify({'error': 'python-docx not installed'}), 500
 
-        # Generate Word document
-        result_doc = create_route_word_document(
+        create_route_word_document(
             upload_path, route_image_path, landmarks, source, destination, doc_path
         )
 
-        if result_doc:
-            return send_file(
-                result_doc,
-                as_attachment=True,
-                download_name=f'route_{base}_{timestamp}.docx',
-            )
+        route_img_name = os.path.basename(route_image_path)
+        poi_landmarks  = [lm for lm in landmarks
+                          if lm.get('type') == 'landmark']
 
-        flash('Error creating Word document.')
+        return jsonify({
+            'success':     True,
+            'source':      source,
+            'destination': destination,
+            'route_image': f'/output/image/{route_img_name}',
+            'doc_name':    doc_name,
+            'landmarks':   [lm['name'] for lm in poi_landmarks],
+        })
 
     except Exception as e:
         logger.error(f"Upload error: {e}")
-        flash(f'Error processing file: {e}')
+        return jsonify({'error': str(e)}), 500
 
-    return redirect(url_for('index'))
+
+@app.route('/output/image/<filename>')
+def serve_route_image(filename):
+    safe = os.path.basename(filename)
+    path = os.path.join(os.path.abspath(app.config['OUTPUT_FOLDER']), safe)
+    if os.path.exists(path) and safe.lower().endswith('.png'):
+        return send_file(path, mimetype='image/png')
+    return 'Not found', 404
+
+
+@app.route('/download/<filename>')
+def download_file(filename):
+    safe = os.path.basename(filename)
+    if safe != filename or not safe:
+        return 'Invalid filename', 400
+    path = os.path.join(os.path.abspath(app.config['OUTPUT_FOLDER']), safe)
+    if os.path.exists(path) and safe.lower().endswith('.docx'):
+        return send_file(path, as_attachment=True, download_name=safe)
+    return 'Not found', 404
 
 
 @app.route('/status')
@@ -703,8 +721,7 @@ def status():
 
 
 if __name__ == '__main__':
-    print("Blue Route Extractor — Word Document Generator")
-    print("=" * 47)
-    print("Access at: http://localhost:5001")
-    print("Press Ctrl+C to stop")
-    app.run(host='127.0.0.1', port=5001, debug=True, use_reloader=False)
+    port = int(os.environ.get('PORT', 5001))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    print(f"Map Route Extractor — http://localhost:{port}")
+    app.run(host='0.0.0.0', port=port, debug=debug, use_reloader=False)
