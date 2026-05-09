@@ -154,6 +154,72 @@ def _bridge_route_gaps(route_mask, max_gap=80):
     return result
 
 
+def _skeletonize_mask(mask):
+    """Reduce thick route mask to a 1-pixel-wide centreline (morphological skeleton)."""
+    skel    = np.zeros_like(mask)
+    element = cv2.getStructuringElement(cv2.MORPH_CROSS, (3, 3))
+    temp    = mask.copy()
+    while True:
+        eroded = cv2.erode(temp, element)
+        opened = cv2.dilate(eroded, element)
+        diff   = cv2.subtract(temp, opened)
+        skel   = cv2.bitwise_or(skel, diff)
+        temp   = eroded.copy()
+        if cv2.countNonZero(temp) == 0:
+            break
+    return skel
+
+
+def _trace_skeleton(skeleton, src_pt, dst_pt):
+    """
+    Order skeleton pixels from src_pt toward dst_pt by projecting each pixel
+    onto the src→dst direction axis.  Works for routes that travel generally
+    from one end to the other; the downstream approxPolyDP step absorbs any
+    small ordering noise near back-and-forth turns.
+    """
+    ys, xs = np.where(skeleton > 0)
+    if len(ys) == 0:
+        return [src_pt, dst_pt]
+
+    pts  = np.column_stack([xs.astype(np.float32), ys.astype(np.float32)])
+    sv   = np.array(src_pt,  dtype=np.float32)
+    dv   = np.array(dst_pt,  dtype=np.float32)
+    axis = dv - sv
+    L    = float(np.linalg.norm(axis))
+    if L < 1.0:
+        return [src_pt, dst_pt]
+    axis /= L
+
+    proj  = np.dot(pts - sv, axis)
+    order = np.argsort(proj)
+    pts   = pts[order]
+
+    # Sub-sample to ≤ 500 representative points before passing to approxPolyDP
+    step = max(1, len(pts) // 500)
+    pts  = pts[::step]
+
+    return [(int(p[0]), int(p[1])) for p in pts]
+
+
+def _simplify_path(path, epsilon_factor=0.025):
+    """
+    Douglas-Peucker simplification converts the dense ordered point list into
+    a small set of straight-line waypoints.
+    epsilon = max(15 px, epsilon_factor × total arc-length)
+    """
+    if len(path) < 3:
+        return path
+
+    pts = np.array(path, dtype=np.float32).reshape(-1, 1, 2)
+    total_len = sum(
+        math.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
+        for i in range(len(path) - 1)
+    )
+    epsilon    = max(15.0, epsilon_factor * total_len)
+    simplified = cv2.approxPolyDP(pts, epsilon, closed=False)
+    return [(int(p[0][0]), int(p[0][1])) for p in simplified]
+
+
 def _draw_landmark_text(img, text, pt, height, width):
     """Draw a small landmark name label using PIL."""
     try:
@@ -355,23 +421,42 @@ def extract_blue_lines_with_labels(image_path, output_path,
         # the route stays thin everywhere while gaps are filled.
         route_mask = _bridge_route_gaps(route_mask, max_gap=80)
 
-        # ── White canvas; paint route pixels directly ─────────────────────────
+        # ── White canvas ──────────────────────────────────────────────────────
         result_img = np.ones((height, width, 3), dtype=np.uint8) * 255
-        result_img[route_mask > 0] = [210, 40, 40]   # vivid blue (BGR)
 
-        # ── Find endpoints ────────────────────────────────────────────────────
+        # ── Find endpoints from mask ──────────────────────────────────────────
         landmarks = []
         ys, xs = np.where(route_mask > 0)
 
         if len(ys) > 0:
-            # Google Maps convention: starting point (white circle) at BOTTOM,
-            # destination pin (red pin) at TOP.
+            # Google Maps convention: source (white circle) at BOTTOM, dest at TOP
             bot_idx = int(np.argmax(ys))
             top_idx = int(np.argmin(ys))
-            src_pt  = (int(xs[bot_idx]), int(ys[bot_idx]))   # source  = bottommost
-            dest_pt = (int(xs[top_idx]), int(ys[top_idx]))   # dest    = topmost
+            src_pt  = (int(xs[bot_idx]), int(ys[bot_idx]))
+            dest_pt = (int(xs[top_idx]), int(ys[top_idx]))
 
-            # Draw circles + names on the image
+            # ── v2: skeleton → trace → simplify → straight-line segments ──────
+            skel      = _skeletonize_mask(route_mask)
+            path_pts  = _trace_skeleton(skel, src_pt, dest_pt)
+            waypoints = _simplify_path(path_pts, epsilon_factor=0.025)
+
+            if not waypoints:
+                waypoints = [src_pt, dest_pt]
+            waypoints[0]  = src_pt
+            waypoints[-1] = dest_pt
+
+            line_color = (210, 40, 40)                   # vivid blue (BGR)
+            line_thick = max(8, width // 80)
+            for i in range(len(waypoints) - 1):
+                cv2.line(result_img, waypoints[i], waypoints[i + 1],
+                         line_color, line_thick, cv2.LINE_AA)
+            # Round joints at each corner waypoint
+            for wp in waypoints:
+                cv2.circle(result_img, wp, line_thick // 2, line_color, -1)
+
+            logger.info(f"v2 straight-lines: {len(waypoints)} waypoints")
+
+            # Draw endpoint circles + name labels
             _draw_endpoint_label(result_img, source_name,
                                  src_pt,  (0, 200, 0), (0, 110, 0),
                                  height, width)
