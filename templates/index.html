@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map Route Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .header {
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+
+        .feature h3 {
+            color: #495057;
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+
+        .feature p {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        .cta-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .demo-info {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 2rem 0;
+            color: #004085;
+        }
+
+        .icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧭 Map Route Extractor</h1>
+            <p>Extract routes from map images and generate professional documentation</p>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="icon">📸</div>
+                <h3>Upload Map Image</h3>
+                <p>Upload a screenshot of your map route (Google Maps, etc.)</p>
+            </div>
+            <div class="feature">
+                <div class="icon">🔍</div>
+                <h3>Smart Analysis</h3>
+                <p>AI-powered route extraction and landmark detection</p>
+            </div>
+            <div class="feature">
+                <div class="icon">📄</div>
+                <h3>Generate Documents</h3>
+                <p>Create professional route documentation with landmarks</p>
+            </div>
+        </div>
+
+        <div class="demo-info">
+            <h3>🎯 How it Works</h3>
+            <p>1. Upload your map image with a blue route line<br>
+            2. Specify your source and destination<br>
+            3. Get a simplified route document with landmarks<br>
+            4. Download as Word document or HTML</p>
+        </div>
+
+        <a href="/upload" class="cta-button">
+            🚀 Start Extracting Routes
+        </a>
+
+        <div style="margin-top: 2rem; font-size: 0.9rem; color: #666;">
+            <p>✅ Supports PNG, JPG, JPEG, BMP, GIF files</p>
+            <p>✅ Powered by HuggingFace AI models</p>
+            <p>✅ Generates Word & HTML documents</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Route Results — Map Route Extractor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 15px 35px rgba(0,0,0,.12);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e9ecef;
+        }
+        .header h1 { color: #333; font-size: 2rem; margin-bottom: .4rem; }
+
+        .success-banner {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid #c3e6cb;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* ── Download card ────────────────────────────────────────────────── */
+        .download-card {
+            background: linear-gradient(135deg, #e8f5e9, #f1f8ff);
+            border: 2px solid #81c784;
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .download-card h2 { color: #2e7d32; margin-bottom: .5rem; font-size: 1.6rem; }
+        .download-card p  { color: #555; margin-bottom: 1.5rem; }
+
+        .download-btn {
+            display: inline-block;
+            background: linear-gradient(45deg, #43a047, #1b5e20);
+            color: white;
+            padding: .9rem 2.5rem;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all .3s;
+            box-shadow: 0 4px 15px rgba(67,160,71,.4);
+        }
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(67,160,71,.5);
+        }
+
+        /* ── Info grid ────────────────────────────────────────────────────── */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+        .info-card h3 { color: #495057; margin-bottom: 1rem; font-size: 1.15rem; }
+        .info-row {
+            display: flex;
+            gap: .5rem;
+            padding: .4rem 0;
+            border-bottom: 1px solid #e9ecef;
+            font-size: .95rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: bold; color: #666; min-width: 110px; }
+
+        /* ── Route diagram ────────────────────────────────────────────────── */
+        .route-diagram {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        .route-diagram h3 { color: #495057; margin-bottom: 1.2rem; }
+        .route-flow {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: .5rem;
+        }
+        .point {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: .6rem 1.5rem;
+            font-weight: bold;
+            font-size: 1rem;
+            min-width: 250px;
+            justify-content: center;
+        }
+        .point.start  { border-color: #28a745; background: #f0fff4; color: #155724; }
+        .point.end    { border-color: #dc3545; background: #fff5f5; color: #721c24; }
+        .arrow { font-size: 1.8rem; color: #667eea; line-height: 1; }
+
+        /* ── Landmarks ────────────────────────────────────────────────────── */
+        .landmarks-section { margin-bottom: 2rem; }
+        .landmarks-section h3 { color: #495057; margin-bottom: 1rem; font-size: 1.15rem; }
+        .lm-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: .75rem;
+        }
+        .lm-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: .75rem 1rem;
+            font-size: .9rem;
+        }
+        .lm-name { font-weight: bold; color: #333; }
+        .lm-type {
+            display: inline-block;
+            background: #e9ecef;
+            border-radius: 4px;
+            padding: .15rem .4rem;
+            font-size: .8rem;
+            color: #666;
+            margin-top: .25rem;
+        }
+        .no-landmarks { color: #888; font-style: italic; }
+
+        /* ── Actions ──────────────────────────────────────────────────────── */
+        .actions { text-align: center; margin-top: 2rem; }
+        .btn-secondary {
+            display: inline-block;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: .75rem 2rem;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            text-decoration: none;
+            transition: all .3s;
+        }
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,.2);
+        }
+
+        /* ── Flash messages ───────────────────────────────────────────────── */
+        .flash-messages { margin-bottom: 1rem; }
+        .flash-msg {
+            padding: .75rem;
+            border-radius: 8px;
+            margin-bottom: .5rem;
+        }
+        .flash-msg.error   { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .flash-msg.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+
+        /* ── Back link ────────────────────────────────────────────────────── */
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover { text-decoration: underline; }
+
+        @media (max-width: 650px) {
+            .info-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+
+        <div class="header">
+            <h1>Route Processing Complete</h1>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for msg in messages %}
+                        <div class="flash-msg success">{{ msg }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <div class="success-banner">
+            Your route has been processed and a Word document is ready to download.
+        </div>
+
+        <!-- ── Download section ──────────────────────────────────────────── -->
+        {% if doc_filename %}
+        <div class="download-card">
+            <h2>📄 Download Word Document</h2>
+            <p>
+                Your <strong>Route Map</strong> document contains the extracted route with
+                the starting point at the top and the destination at the bottom,
+                along with navigation instructions and a compass rose.
+            </p>
+            <a href="{{ url_for('download_file', filename=doc_filename) }}"
+               class="download-btn">
+                ⬇️  Download Route Map (.docx)
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- ── Route summary ─────────────────────────────────────────────── -->
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>📍 Route Information</h3>
+                <div class="info-row">
+                    <span class="info-label">Source:</span>
+                    <span>{{ route_data.source }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Destination:</span>
+                    <span>{{ route_data.destination }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Processed:</span>
+                    <span>{{ route_data.processed_at[:19].replace('T', ' ') }}</span>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3>📊 Document Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Format:</span>
+                    <span>Word Document (.docx)</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Heading:</span>
+                    <span>Route Map</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Layout:</span>
+                    <span>Source top · Destination bottom</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Compass:</span>
+                    <span>Included</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Route diagram ─────────────────────────────────────────────── -->
+        <div class="route-diagram">
+            <h3>🗺️ Route Layout (as it appears in the document)</h3>
+            <div class="route-flow">
+                <div class="point start">🟢 &nbsp; {{ route_data.source }} &nbsp; (Starting Point)</div>
+                <div class="arrow">↓</div>
+                <div class="arrow" style="font-size:1rem;color:#999;">blue route line</div>
+                <div class="arrow">↓</div>
+                <div class="point end">🔴 &nbsp; {{ route_data.destination }} &nbsp; (Destination)</div>
+            </div>
+        </div>
+
+        <!-- ── Landmarks ─────────────────────────────────────────────────── -->
+        <div class="landmarks-section">
+            <h3>📌 Detected Points</h3>
+            {% if route_data.landmarks %}
+                <div class="lm-grid">
+                    {% for lm in route_data.landmarks %}
+                    <div class="lm-card">
+                        <div class="lm-name">{{ lm.name }}</div>
+                        <span class="lm-type">{{ lm.type | title }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="no-landmarks">
+                    No additional landmarks were detected in the image.
+                    The document contains the starting point and destination extracted from the route line.
+                </p>
+            {% endif %}
+        </div>
+
+        <!-- ── Actions ───────────────────────────────────────────────────── -->
+        <div class="actions">
+            <a href="/upload" class="btn-secondary">🔄 Process Another Route</a>
+        </div>
+    </div>
+</body>
+</html>

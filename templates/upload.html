@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Map - Route Extractor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .file-upload-area:hover {
+            background: #e7f3ff;
+            border-color: #5a6fd8;
+        }
+
+        .file-upload-area.dragover {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+
+        .file-upload-icon {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+        }
+
+        .file-upload-text {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .file-upload-hint {
+            color: #999;
+            font-size: 0.9rem;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-preview {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .file-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+        }
+
+        .submit-button {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .submit-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .flash-messages {
+            margin-bottom: 1rem;
+        }
+
+        .flash-message {
+            padding: 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .flash-message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .flash-message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .requirements {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .requirements h3 {
+            color: #004085;
+            margin-bottom: 0.5rem;
+        }
+
+        .requirements ul {
+            margin-left: 1rem;
+            color: #004085;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <div class="header">
+            <h1>🗺️ Upload Map Image</h1>
+            <p>Upload your map image and specify source/destination locations</p>
+        </div>
+
+        <div class="requirements">
+            <h3>📋 Requirements</h3>
+            <ul>
+                <li>Map image with a <strong>blue route line</strong></li>
+                <li>Clear source and destination points</li>
+                <li>Supported formats: PNG, JPG, JPEG, BMP, GIF</li>
+                <li>Maximum file size: 16MB</li>
+            </ul>
+        </div>
+
+        <div class="flash-messages">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="flash-message error">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <form method="POST" enctype="multipart/form-data" id="upload-form">
+            <div class="form-group">
+                <label for="source">📍 Source Location:</label>
+                <input type="text" id="source" name="source" placeholder="e.g., Home, Office, Hotel Name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="destination">🎯 Destination Location:</label>
+                <input type="text" id="destination" name="destination" placeholder="e.g., NTR Garden, Mall, Airport" required>
+            </div>
+
+            <div class="form-group">
+                <label for="map_image">🗺️ Map Image:</label>
+                <div class="file-upload-area" onclick="document.getElementById('file-input').click()">
+                    <div class="file-upload-icon">📁</div>
+                    <div class="file-upload-text">Click to select map image</div>
+                    <div class="file-upload-hint">Or drag and drop your image here</div>
+                </div>
+                <input type="file" id="file-input" name="map_image" accept="image/*" required>
+                <div class="file-preview" id="file-preview"></div>
+            </div>
+
+            <button type="submit" class="submit-button" id="submit-btn">
+                🚀 Extract Route & Generate Document
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <p>Processing your route... This may take a moment.</p>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const filePreview = document.getElementById('file-preview');
+        const uploadForm = document.getElementById('upload-form');
+        const submitBtn = document.getElementById('submit-btn');
+        const loading = document.getElementById('loading');
+        const uploadArea = document.querySelector('.file-upload-area');
+
+        // Handle file selection
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                previewFile(file);
+            }
+        });
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                previewFile(files[0]);
+            }
+        });
+
+        function previewFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                filePreview.innerHTML = `
+                    <img src="${e.target.result}" alt="Map Preview">
+                    <p style="margin-top: 0.5rem; color: #666;">Selected: ${file.name}</p>
+                `;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle form submission
+        uploadForm.addEventListener('submit', function(e) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+            loading.style.display = 'block';
+            
+            // Scroll to loading indicator
+            loading.scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // Validate form
+        function validateForm() {
+            const source = document.getElementById('source').value.trim();
+            const destination = document.getElementById('destination').value.trim();
+            const file = fileInput.files[0];
+            
+            if (!source || !destination || !file) {
+                submitBtn.disabled = true;
+                return false;
+            }
+            
+            submitBtn.disabled = false;
+            return true;
+        }
+
+        // Check form validity on input
+        document.getElementById('source').addEventListener('input', validateForm);
+        document.getElementById('destination').addEventListener('input', validateForm);
+        fileInput.addEventListener('change', validateForm);
+
+        // Initial validation
+        validateForm();
+    </script>
+</body>
+</html>
