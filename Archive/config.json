@@ -1,0 +1,37 @@
+{
+  "blue_color_range": {
+    "lower": [100, 150, 0],
+    "upper": [140, 255, 255]
+  },
+  "output_dir": "output",
+  "temp_dir": "temp",
+  "uploads_dir": "uploads",
+  "supported_formats": [".jpg", ".jpeg", ".png", ".bmp", ".gif"],
+  "max_file_size_mb": 16,
+  "landmark_detection": {
+    "enabled": true,
+    "confidence_threshold": 0.5,
+    "max_landmarks": 10
+  },
+  "huggingface_models": {
+    "text_generation": "gpt2",
+    "summarization": "facebook/bart-large-cnn",
+    "vision": "google/vit-base-patch16-224"
+  },
+  "document_generation": {
+    "formats": ["html", "docx"],
+    "default_format": "html",
+    "include_images": true,
+    "include_landmarks": true
+  },
+  "route_processing": {
+    "simplify_route": true,
+    "detect_direction": true,
+    "extract_landmarks": true,
+    "generate_visualization": true
+  },
+  "api_settings": {
+    "max_requests_per_minute": 30,
+    "timeout_seconds": 300
+  }
+}
